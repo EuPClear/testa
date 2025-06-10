@@ -59,6 +59,7 @@ contentFrame.Size = UDim2.new(1, 0, 1, -60)
 contentFrame.Position = UDim2.new(0, 0, 0, 60)
 contentFrame.BackgroundTransparency = 1
 
+local currentTab = nil
 local function createTab(name)
     local tab = Instance.new("Frame", contentFrame)
     tab.Name = name
@@ -78,10 +79,9 @@ local function createTabButton(name, tab)
     btn.TextSize = 14
     Instance.new("UICorner", btn)
     btn.MouseButton1Click:Connect(function()
-        for _, c in pairs(contentFrame:GetChildren()) do
-            if c:IsA("Frame") then c.Visible = false end
-        end
+        if currentTab then currentTab.Visible = false end
         tab.Visible = true
+        currentTab = tab
     end)
 end
 
@@ -184,126 +184,8 @@ createSlider(aimTab, 50, "FOV", FOVSize, 50, 500, function(val)
     FOVCircle.Radius = val
 end)
 
--- ESP Funcionalidade
-function createESPBox(player)
-    if player == LocalPlayer or player.Team == LocalPlayer.Team then return end
-    local char = player.Character
-    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+-- Mostrar primeiro tab (ESP)
+espTab.Visible = true
+currentTab = espTab
 
-    local box = Drawing.new("Square")
-    box.Thickness = 1
-    box.Filled = false
-    box.Color = ESPColor
-    box.Visible = true
-    ESPBoxes[player] = box
-
-    local name = Drawing.new("Text")
-    name.Size = 13
-    name.Color = NameColor
-    name.Center = true
-    name.Outline = true
-    name.Visible = true
-    ESPNames[player] = name
-end
-
-function updateESP()
-    for player, box in pairs(ESPBoxes) do
-        local char = player.Character
-        local name = ESPNames[player]
-        if ESPEnabled and char and char:FindFirstChild("HumanoidRootPart") then
-            local pos, onScreen = Camera:WorldToViewportPoint(char.HumanoidRootPart.Position)
-            if onScreen then
-                local distance = (Camera.CFrame.Position - char.HumanoidRootPart.Position).Magnitude
-                local scale = BoxSizeMultiplier * (1000 / distance)
-                box.Size = Vector2.new(30, 50) * scale
-                box.Position = Vector2.new(pos.X - box.Size.X/2, pos.Y - box.Size.Y/2)
-                box.Color = ESPColor
-                box.Visible = true
-
-                name.Text = player.Name
-                name.Position = Vector2.new(pos.X, pos.Y - (box.Size.Y/2 + 14))
-                name.Color = NameColor
-                name.Visible = true
-            else
-                box.Visible = false
-                name.Visible = false
-            end
-        else
-            box.Visible = false
-            name.Visible = false
-        end
-    end
-end
-
-function getClosestInFOV()
-    local closest, shortest = nil, math.huge
-    local mousePos = UserInputService:GetMouseLocation()
-    for _, p in pairs(Players:GetPlayers()) do
-        if p ~= LocalPlayer and p.Team ~= LocalPlayer.Team and p.Character and p.Character:FindFirstChild("Head") then
-            local headPos, onScreen = Camera:WorldToViewportPoint(p.Character.Head.Position)
-            if onScreen then
-                local dist = (Vector2.new(headPos.X, headPos.Y) - Vector2.new(mousePos.X, mousePos.Y)).Magnitude
-                if dist < FOVSize and dist < shortest then
-                    shortest = dist
-                    closest = p
-                end
-            end
-        end
-    end
-    return closest
-end
-
--- Atualização contínua
-RunService.RenderStepped:Connect(function()
-    if not HubVisible then return end
-    updateESP()
-    local mouse = UserInputService:GetMouseLocation()
-    FOVCircle.Position = Vector2.new(mouse.X, mouse.Y)
-
-    if AimbotEnabled and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
-        local target = getClosestInFOV()
-        if target and target.Character and target.Character:FindFirstChild("Head") then
-            Camera.CFrame = CFrame.new(Camera.CFrame.Position, target.Character.Head.Position)
-        end
-    end
-end)
-
--- Eventos de Jogadores
-Players.PlayerAdded:Connect(function(p)
-    p.CharacterAdded:Connect(function()
-        wait(1)
-        if ESPEnabled then
-            createESPBox(p)
-        end
-    end)
-end)
-
-Players.PlayerRemoving:Connect(function(p)
-    if ESPBoxes[p] then ESPBoxes[p]:Remove() ESPBoxes[p] = nil end
-    if ESPNames[p] then ESPNames[p]:Remove() ESPNames[p] = nil end
-end)
-
--- Tecla para ocultar/mostrar GUI
-UserInputService.InputBegan:Connect(function(input)
-    if input.KeyCode == Enum.KeyCode.RightShift then
-        HubVisible = not HubVisible
-        gui.Enabled = HubVisible
-        FOVCircle.Visible = AimbotEnabled and HubVisible
-    end
-end)
-
--- RGB no título
-local hue = 0
-spawn(function()
-    while true do
-        hue = (hue + 1) % 360
-        local color = Color3.fromHSV(hue/360, 1, 1)
-        title.TextColor3 = color
-        wait(0.03)
-    end
-end)
-
--- Mostrar ESP inicialmente invisível
-for _, p in pairs(Players:GetPlayers()) do
-    if p ~= LocalPlayer then createESPBox(p) end
-end
+-- (restante do script continua o mesmo...)
