@@ -31,7 +31,7 @@ gui.Name = "EUP_HUB"
 defaultFont = Enum.Font.GothamBold
 
 local mainFrame = Instance.new("Frame", gui)
-mainFrame.Size = UDim2.new(0, 300, 0, 280)
+mainFrame.Size = UDim2.new(0, 320, 0, 300)
 mainFrame.Position = UDim2.new(0, 20, 0, 50)
 mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 mainFrame.Active = true
@@ -43,10 +43,18 @@ Instance.new("UIStroke", mainFrame).Color = Color3.fromRGB(85, 170, 255)
 local title = Instance.new("TextLabel", mainFrame)
 title.Size = UDim2.new(1, 0, 0, 30)
 title.Text = "EUP HUB"
-title.TextColor3 = Color3.fromRGB(255,0,0)
 title.Font = defaultFont
 title.TextSize = 20
 title.BackgroundTransparency = 1
+
+task.spawn(function()
+    while true do
+        for i = 0, 1, 0.01 do
+            title.TextColor3 = Color3.fromHSV(i, 1, 1)
+            task.wait()
+        end
+    end
+end)
 
 -- Abas
 local tabButtons = Instance.new("Frame", mainFrame)
@@ -69,9 +77,10 @@ local function createTab(name)
     return tab
 end
 
-local function createTabButton(name, tab)
+local function createTabButton(name, tab, xPos)
     local btn = Instance.new("TextButton", tabButtons)
     btn.Size = UDim2.new(0, 100, 1, 0)
+    btn.Position = UDim2.new(0, xPos, 0, 0)
     btn.Text = name
     btn.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
     btn.TextColor3 = Color3.new(1, 1, 1)
@@ -157,9 +166,24 @@ local function createSlider(parent, yPos, labelText, defaultValue, min, max, onC
     end)
 end
 
--- ESP TAB
+-- TABS
+local welcomeTab = createTab("Welcome")
+createTabButton("Welcome", welcomeTab, 0)
 local espTab = createTab("ESP")
-createTabButton("ESP", espTab)
+createTabButton("ESP", espTab, 105)
+local aimTab = createTab("Aimbot")
+createTabButton("Aimbot", aimTab, 210)
+
+-- CONTEÚDO DAS ABAS
+local welcomeLabel = Instance.new("TextLabel", welcomeTab)
+welcomeLabel.Size = UDim2.new(1, 0, 0, 30)
+welcomeLabel.Position = UDim2.new(0, 0, 0, 20)
+welcomeLabel.Text = "Welcome to EUP HUB!"
+welcomeLabel.Font = Enum.Font.GothamBold
+welcomeLabel.TextSize = 18
+welcomeLabel.TextColor3 = Color3.new(1,1,1)
+welcomeLabel.BackgroundTransparency = 1
+
 createButton(espTab, "Ativar ESP", 10, function()
     ESPEnabled = not ESPEnabled
     for _, p in pairs(Players:GetPlayers()) do
@@ -172,9 +196,6 @@ createColorPicker(espTab, 50, "Cor Box", ESPColor, function(newColor) ESPColor =
 createColorPicker(espTab, 80, "Cor Nome", NameColor, function(newColor) NameColor = newColor end)
 createSlider(espTab, 110, "Tamanho Box", BoxSizeMultiplier, 0.1, 3, function(val) BoxSizeMultiplier = val end)
 
--- Aimbot TAB
-local aimTab = createTab("Aimbot")
-createTabButton("Aimbot", aimTab)
 createButton(aimTab, "Ativar Aimbot", 10, function()
     AimbotEnabled = not AimbotEnabled
     FOVCircle.Visible = AimbotEnabled
@@ -184,8 +205,17 @@ createSlider(aimTab, 50, "FOV", FOVSize, 50, 500, function(val)
     FOVCircle.Radius = val
 end)
 
--- Mostrar primeiro tab (ESP)
-espTab.Visible = true
-currentTab = espTab
+-- Mostrar primeiro tab (Welcome)
+welcomeTab.Visible = true
+currentTab = welcomeTab
 
--- (restante do script continua o mesmo...)
+-- Minimizar com Shift Direito
+UserInputService.InputBegan:Connect(function(input, processed)
+    if processed then return end
+    if input.KeyCode == Enum.KeyCode.RightShift then
+        HubVisible = not HubVisible
+        mainFrame.Visible = HubVisible
+    end
+end)
+
+-- (continua o restante do script de lógica ESP/Aimbot...)
