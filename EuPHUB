@@ -15,7 +15,6 @@ local FOVSize = 150
 local BoxSizeMultiplier = 1
 local HubVisible = true
 
--- Criar círculo FOV
 local FOVCircle = Drawing.new("Circle")
 FOVCircle.Color = Color3.fromRGB(85, 170, 255)
 FOVCircle.Thickness = 1
@@ -24,12 +23,9 @@ FOVCircle.Radius = FOVSize
 FOVCircle.Filled = false
 FOVCircle.Visible = false
 
--- Criar Interface Principal
+-- Interface
 local gui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
 gui.Name = "EUP_HUB"
-
-defaultFont = Enum.Font.GothamBold
-
 local mainFrame = Instance.new("Frame", gui)
 mainFrame.Size = UDim2.new(0, 320, 0, 300)
 mainFrame.Position = UDim2.new(0, 20, 0, 50)
@@ -39,14 +35,12 @@ mainFrame.Draggable = true
 Instance.new("UICorner", mainFrame)
 Instance.new("UIStroke", mainFrame).Color = Color3.fromRGB(85, 170, 255)
 
--- Título RGB
 local title = Instance.new("TextLabel", mainFrame)
 title.Size = UDim2.new(1, 0, 0, 30)
 title.Text = "EUP HUB"
-title.Font = defaultFont
+title.Font = Enum.Font.GothamBold
 title.TextSize = 20
 title.BackgroundTransparency = 1
-
 task.spawn(function()
     while true do
         for i = 0, 1, 0.01 do
@@ -56,7 +50,6 @@ task.spawn(function()
     end
 end)
 
--- Abas
 local tabButtons = Instance.new("Frame", mainFrame)
 tabButtons.Size = UDim2.new(1, 0, 0, 30)
 tabButtons.Position = UDim2.new(0, 0, 0, 30)
@@ -94,7 +87,7 @@ local function createTabButton(name, tab, xPos)
     end)
 end
 
--- Utilitários UI
+-- UI Elements
 local function createButton(parent, text, yPos, callback)
     local btn = Instance.new("TextButton", parent)
     btn.Size = UDim2.new(0.9, 0, 0, 30)
@@ -166,7 +159,7 @@ local function createSlider(parent, yPos, labelText, defaultValue, min, max, onC
     end)
 end
 
--- TABS
+-- Abas
 local welcomeTab = createTab("Welcome")
 createTabButton("Welcome", welcomeTab, 0)
 local espTab = createTab("ESP")
@@ -174,7 +167,6 @@ createTabButton("ESP", espTab, 105)
 local aimTab = createTab("Aimbot")
 createTabButton("Aimbot", aimTab, 210)
 
--- CONTEÚDO DAS ABAS
 local welcomeLabel = Instance.new("TextLabel", welcomeTab)
 welcomeLabel.Size = UDim2.new(1, 0, 0, 30)
 welcomeLabel.Position = UDim2.new(0, 0, 0, 20)
@@ -186,11 +178,6 @@ welcomeLabel.BackgroundTransparency = 1
 
 createButton(espTab, "Ativar ESP", 10, function()
     ESPEnabled = not ESPEnabled
-    for _, p in pairs(Players:GetPlayers()) do
-        if not ESPBoxes[p] then
-            createESPBox(p)
-        end
-    end
 end)
 createColorPicker(espTab, 50, "Cor Box", ESPColor, function(newColor) ESPColor = newColor end)
 createColorPicker(espTab, 80, "Cor Nome", NameColor, function(newColor) NameColor = newColor end)
@@ -205,11 +192,9 @@ createSlider(aimTab, 50, "FOV", FOVSize, 50, 500, function(val)
     FOVCircle.Radius = val
 end)
 
--- Mostrar primeiro tab (Welcome)
 welcomeTab.Visible = true
 currentTab = welcomeTab
 
--- Minimizar com Shift Direito
 UserInputService.InputBegan:Connect(function(input, processed)
     if processed then return end
     if input.KeyCode == Enum.KeyCode.RightShift then
@@ -218,4 +203,90 @@ UserInputService.InputBegan:Connect(function(input, processed)
     end
 end)
 
--- (continua o restante do script de lógica ESP/Aimbot...)
+local function createESPBox(player)
+    if player == LocalPlayer then return end
+    local box = Drawing.new("Square")
+    box.Thickness = 2
+    box.Filled = false
+    box.Visible = false
+
+    local name = Drawing.new("Text")
+    name.Size = 14
+    name.Center = true
+    name.Outline = true
+    name.Visible = false
+
+    ESPBoxes[player] = box
+    ESPNames[player] = name
+end
+
+local function removeESP(player)
+    if ESPBoxes[player] then ESPBoxes[player]:Remove() ESPBoxes[player] = nil end
+    if ESPNames[player] then ESPNames[player]:Remove() ESPNames[player] = nil end
+end
+
+Players.PlayerRemoving:Connect(removeESP)
+Players.PlayerAdded:Connect(function(p)
+    task.wait(1)
+    createESPBox(p)
+end)
+
+for _, p in pairs(Players:GetPlayers()) do
+    if not ESPBoxes[p] then
+        createESPBox(p)
+    end
+end
+
+local function getClosestTarget()
+    local closest, shortest = nil, math.huge
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Team ~= LocalPlayer.Team and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local pos, onScreen = Camera:WorldToViewportPoint(player.Character.HumanoidRootPart.Position)
+            local distance = (Vector2.new(pos.X, pos.Y) - UserInputService:GetMouseLocation()).Magnitude
+            if onScreen and distance < FOVSize and distance < shortest then
+                shortest = distance
+                closest = player
+            end
+        end
+    end
+    return closest
+end
+
+RunService.RenderStepped:Connect(function()
+    local mousePos = UserInputService:GetMouseLocation()
+    FOVCircle.Position = mousePos
+
+    for _, player in ipairs(Players:GetPlayers()) do
+        local char = player.Character
+        if player ~= LocalPlayer and char and char:FindFirstChild("HumanoidRootPart") and char:FindFirstChild("Head") and player.Team ~= LocalPlayer.Team then
+            local hrp = char.HumanoidRootPart
+            local pos, visible = Camera:WorldToViewportPoint(hrp.Position)
+            if ESPEnabled and visible then
+                local scale = BoxSizeMultiplier
+                local size = Vector2.new(50, 100) * scale
+                local screenPos = Vector2.new(pos.X - size.X/2, pos.Y - size.Y/2)
+
+                ESPBoxes[player].Size = size
+                ESPBoxes[player].Position = screenPos
+                ESPBoxes[player].Color = ESPColor
+                ESPBoxes[player].Visible = true
+
+                ESPNames[player].Position = Vector2.new(pos.X, pos.Y - size.Y/2 - 14)
+                ESPNames[player].Text = player.Name
+                ESPNames[player].Color = NameColor
+                ESPNames[player].Visible = true
+            else
+                if ESPBoxes[player] then ESPBoxes[player].Visible = false end
+                if ESPNames[player] then ESPNames[player].Visible = false end
+            end
+        end
+    end
+
+    if AimbotEnabled then
+        local target = getClosestTarget()
+        if target and target.Character and target.Character:FindFirstChild("Head") then
+            local headPos = Camera:WorldToViewportPoint(target.Character.Head.Position)
+            mousemoverel((headPos.X - mousePos.X) / 4, (headPos.Y - mousePos.Y) / 4)
+        end
+    end
+end)
