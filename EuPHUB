@@ -1,0 +1,220 @@
+-- EUP HUB - ESP com Boxes, Cores, FOV ajustável e Aimbot separado
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local Camera = workspace.CurrentCamera
+local LocalPlayer = Players.LocalPlayer
+
+local ESPEnabled = false
+local AimbotEnabled = false
+local ESPBoxes = {}
+local ESPColor = Color3.fromRGB(255, 80, 80)
+local NameColor = Color3.fromRGB(255, 255, 255)
+local FOVSize = 150
+
+-- Criar círculo FOV
+local FOVCircle = Drawing.new("Circle")
+FOVCircle.Color = Color3.fromRGB(85, 170, 255)
+FOVCircle.Thickness = 1
+FOVCircle.NumSides = 100
+FOVCircle.Radius = FOVSize
+FOVCircle.Filled = false
+FOVCircle.Visible = false
+
+-- Criar Interface
+local gui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
+gui.Name = "EUP_HUB"
+
+defaultFont = Enum.Font.GothamBold
+
+local function createSection(titleText, posY)
+    local section = Instance.new("Frame", gui)
+    section.Size = UDim2.new(0, 220, 0, 200)
+    section.Position = UDim2.new(0, 20, 0, posY)
+    section.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    section.Active = true
+    section.Draggable = true
+    Instance.new("UICorner", section)
+    Instance.new("UIStroke", section).Color = Color3.fromRGB(85, 170, 255)
+
+    local title = Instance.new("TextLabel", section)
+    title.Size = UDim2.new(1, 0, 0, 30)
+    title.Text = titleText
+    title.TextColor3 = Color3.new(1, 1, 1)
+    title.Font = defaultFont
+    title.TextSize = 16
+    title.BackgroundTransparency = 1
+
+    return section
+end
+
+local function createButton(parent, text, yPos, callback)
+    local btn = Instance.new("TextButton", parent)
+    btn.Size = UDim2.new(0.9, 0, 0, 30)
+    btn.Position = UDim2.new(0.05, 0, 0, yPos)
+    btn.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+    btn.Text = text
+    btn.TextColor3 = Color3.new(1, 1, 1)
+    btn.Font = Enum.Font.Gotham
+    btn.TextSize = 14
+    Instance.new("UICorner", btn)
+    btn.MouseButton1Click:Connect(callback)
+    return btn
+end
+
+local function createColorPicker(parent, yPos, name, defaultColor, onColorChanged)
+    local label = Instance.new("TextLabel", parent)
+    label.Size = UDim2.new(0.5, 0, 0, 25)
+    label.Position = UDim2.new(0.05, 0, 0, yPos)
+    label.Text = name
+    label.Font = Enum.Font.Gotham
+    label.TextSize = 14
+    label.TextColor3 = Color3.new(1,1,1)
+    label.BackgroundTransparency = 1
+
+    local box = Instance.new("TextBox", parent)
+    box.Size = UDim2.new(0.4, 0, 0, 25)
+    box.Position = UDim2.new(0.55, 0, 0, yPos)
+    box.Text = string.format("%d,%d,%d", defaultColor.R*255, defaultColor.G*255, defaultColor.B*255)
+    box.Font = Enum.Font.Code
+    box.TextSize = 14
+    box.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    box.TextColor3 = Color3.new(1,1,1)
+    Instance.new("UICorner", box)
+
+    box.FocusLost:Connect(function()
+        local r,g,b = box.Text:match("(%d+),(%d+),(%d+)")
+        if r and g and b then
+            local c = Color3.fromRGB(tonumber(r), tonumber(g), tonumber(b))
+            onColorChanged(c)
+        end
+    end)
+end
+
+local function createSlider(parent, yPos, onChanged)
+    local slider = Instance.new("TextBox", parent)
+    slider.Size = UDim2.new(0.9, 0, 0, 25)
+    slider.Position = UDim2.new(0.05, 0, 0, yPos)
+    slider.Text = tostring(FOVSize)
+    slider.Font = Enum.Font.Code
+    slider.TextSize = 14
+    slider.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    slider.TextColor3 = Color3.new(1,1,1)
+    Instance.new("UICorner", slider)
+
+    slider.FocusLost:Connect(function()
+        local new = tonumber(slider.Text)
+        if new then
+            FOVSize = math.clamp(new, 50, 500)
+            FOVCircle.Radius = FOVSize
+        end
+    end)
+end
+
+-- ESP
+function createESPBox(player)
+    if player == LocalPlayer or player.Team == LocalPlayer.Team then return end
+    local char = player.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+
+    local box = Drawing.new("Square")
+    box.Thickness = 1
+    box.Filled = false
+    box.Color = ESPColor
+    box.Visible = true
+    ESPBoxes[player] = box
+end
+
+function updateESP()
+    for player, box in pairs(ESPBoxes) do
+        local char = player.Character
+        if ESPEnabled and char and char:FindFirstChild("HumanoidRootPart") then
+            local pos, onScreen = Camera:WorldToViewportPoint(char.HumanoidRootPart.Position)
+            if onScreen then
+                local size = 3
+                local scale = 1000 / (Camera.CFrame.Position - char.HumanoidRootPart.Position).Magnitude
+                box.Size = Vector2.new(30, 50) * scale
+                box.Position = Vector2.new(pos.X - box.Size.X/2, pos.Y - box.Size.Y/2)
+                box.Color = ESPColor
+                box.Visible = true
+            else
+                box.Visible = false
+            end
+        else
+            box.Visible = false
+        end
+    end
+end
+
+-- Aimbot
+function getClosestInFOV()
+    local closest, shortest = nil, math.huge
+    local mousePos = UserInputService:GetMouseLocation()
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer and p.Team ~= LocalPlayer.Team and p.Character and p.Character:FindFirstChild("Head") then
+            local headPos, onScreen = Camera:WorldToViewportPoint(p.Character.Head.Position)
+            if onScreen then
+                local dist = (Vector2.new(headPos.X, headPos.Y) - Vector2.new(mousePos.X, mousePos.Y)).Magnitude
+                if dist < FOVSize and dist < shortest then
+                    shortest = dist
+                    closest = p
+                end
+            end
+        end
+    end
+    return closest
+end
+
+-- UI Setup
+local espSection = createSection("ESP", 20)
+createButton(espSection, "Ativar ESP", 40, function()
+    ESPEnabled = not ESPEnabled
+    for _, p in pairs(Players:GetPlayers()) do
+        if not ESPBoxes[p] then
+            createESPBox(p)
+        end
+    end
+end)
+
+createColorPicker(espSection, 80, "Cor Box", ESPColor, function(newColor)
+    ESPColor = newColor
+end)
+
+createSlider(espSection, 120)
+
+local aimSection = createSection("Aimbot", 240)
+createButton(aimSection, "Ativar Aimbot", 40, function()
+    AimbotEnabled = not AimbotEnabled
+    FOVCircle.Visible = AimbotEnabled
+end)
+
+-- ESP Update
+RunService.RenderStepped:Connect(function()
+    updateESP()
+    local mouse = UserInputService:GetMouseLocation()
+    FOVCircle.Position = Vector2.new(mouse.X, mouse.Y)
+
+    if AimbotEnabled and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
+        local target = getClosestInFOV()
+        if target and target.Character and target.Character:FindFirstChild("Head") then
+            Camera.CFrame = CFrame.new(Camera.CFrame.Position, target.Character.Head.Position)
+        end
+    end
+end)
+
+-- Eventos
+Players.PlayerAdded:Connect(function(p)
+    p.CharacterAdded:Connect(function()
+        wait(1)
+        if ESPEnabled then
+            createESPBox(p)
+        end
+    end)
+end)
+
+Players.PlayerRemoving:Connect(function(p)
+    if ESPBoxes[p] then
+        ESPBoxes[p]:Remove()
+        ESPBoxes[p] = nil
+    end
+end)
