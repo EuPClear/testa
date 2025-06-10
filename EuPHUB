@@ -1,4 +1,4 @@
--- EUP HUB - ESP com Boxes, Cores, FOV ajustável e Aimbot separado + Tamanho ajustável, Team Check e Nome
+-- EUP HUB - ESP & Aimbot com Abas, Minimizar (Shift Direito), RGB Título
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -13,6 +13,7 @@ local ESPColor = Color3.fromRGB(255, 80, 80)
 local NameColor = Color3.fromRGB(255, 255, 255)
 local FOVSize = 150
 local BoxSizeMultiplier = 1
+local HubVisible = true
 
 -- Criar círculo FOV
 local FOVCircle = Drawing.new("Circle")
@@ -23,33 +24,68 @@ FOVCircle.Radius = FOVSize
 FOVCircle.Filled = false
 FOVCircle.Visible = false
 
--- Criar Interface
+-- Criar Interface Principal
 local gui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
 gui.Name = "EUP_HUB"
 
 defaultFont = Enum.Font.GothamBold
 
-local function createSection(titleText, posY)
-    local section = Instance.new("Frame", gui)
-    section.Size = UDim2.new(0, 220, 0, 230)
-    section.Position = UDim2.new(0, 20, 0, posY)
-    section.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    section.Active = true
-    section.Draggable = true
-    Instance.new("UICorner", section)
-    Instance.new("UIStroke", section).Color = Color3.fromRGB(85, 170, 255)
+local mainFrame = Instance.new("Frame", gui)
+mainFrame.Size = UDim2.new(0, 300, 0, 280)
+mainFrame.Position = UDim2.new(0, 20, 0, 50)
+mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+mainFrame.Active = true
+mainFrame.Draggable = true
+Instance.new("UICorner", mainFrame)
+Instance.new("UIStroke", mainFrame).Color = Color3.fromRGB(85, 170, 255)
 
-    local title = Instance.new("TextLabel", section)
-    title.Size = UDim2.new(1, 0, 0, 30)
-    title.Text = titleText
-    title.TextColor3 = Color3.new(1, 1, 1)
-    title.Font = defaultFont
-    title.TextSize = 16
-    title.BackgroundTransparency = 1
+-- Título RGB
+local title = Instance.new("TextLabel", mainFrame)
+title.Size = UDim2.new(1, 0, 0, 30)
+title.Text = "EUP HUB"
+title.TextColor3 = Color3.fromRGB(255,0,0)
+title.Font = defaultFont
+title.TextSize = 20
+title.BackgroundTransparency = 1
 
-    return section
+-- Abas
+local tabButtons = Instance.new("Frame", mainFrame)
+tabButtons.Size = UDim2.new(1, 0, 0, 30)
+tabButtons.Position = UDim2.new(0, 0, 0, 30)
+tabButtons.BackgroundTransparency = 1
+
+local contentFrame = Instance.new("Frame", mainFrame)
+contentFrame.Size = UDim2.new(1, 0, 1, -60)
+contentFrame.Position = UDim2.new(0, 0, 0, 60)
+contentFrame.BackgroundTransparency = 1
+
+local function createTab(name)
+    local tab = Instance.new("Frame", contentFrame)
+    tab.Name = name
+    tab.Size = UDim2.new(1, 0, 1, 0)
+    tab.Visible = false
+    tab.BackgroundTransparency = 1
+    return tab
 end
 
+local function createTabButton(name, tab)
+    local btn = Instance.new("TextButton", tabButtons)
+    btn.Size = UDim2.new(0, 100, 1, 0)
+    btn.Text = name
+    btn.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+    btn.TextColor3 = Color3.new(1, 1, 1)
+    btn.Font = Enum.Font.Gotham
+    btn.TextSize = 14
+    Instance.new("UICorner", btn)
+    btn.MouseButton1Click:Connect(function()
+        for _, c in pairs(contentFrame:GetChildren()) do
+            if c:IsA("Frame") then c.Visible = false end
+        end
+        tab.Visible = true
+    end)
+end
+
+-- Utilitários UI
 local function createButton(parent, text, yPos, callback)
     local btn = Instance.new("TextButton", parent)
     btn.Size = UDim2.new(0.9, 0, 0, 30)
@@ -61,7 +97,6 @@ local function createButton(parent, text, yPos, callback)
     btn.TextSize = 14
     Instance.new("UICorner", btn)
     btn.MouseButton1Click:Connect(callback)
-    return btn
 end
 
 local function createColorPicker(parent, yPos, name, defaultColor, onColorChanged)
@@ -122,7 +157,34 @@ local function createSlider(parent, yPos, labelText, defaultValue, min, max, onC
     end)
 end
 
--- ESP
+-- ESP TAB
+local espTab = createTab("ESP")
+createTabButton("ESP", espTab)
+createButton(espTab, "Ativar ESP", 10, function()
+    ESPEnabled = not ESPEnabled
+    for _, p in pairs(Players:GetPlayers()) do
+        if not ESPBoxes[p] then
+            createESPBox(p)
+        end
+    end
+end)
+createColorPicker(espTab, 50, "Cor Box", ESPColor, function(newColor) ESPColor = newColor end)
+createColorPicker(espTab, 80, "Cor Nome", NameColor, function(newColor) NameColor = newColor end)
+createSlider(espTab, 110, "Tamanho Box", BoxSizeMultiplier, 0.1, 3, function(val) BoxSizeMultiplier = val end)
+
+-- Aimbot TAB
+local aimTab = createTab("Aimbot")
+createTabButton("Aimbot", aimTab)
+createButton(aimTab, "Ativar Aimbot", 10, function()
+    AimbotEnabled = not AimbotEnabled
+    FOVCircle.Visible = AimbotEnabled
+end)
+createSlider(aimTab, 50, "FOV", FOVSize, 50, 500, function(val)
+    FOVSize = val
+    FOVCircle.Radius = val
+end)
+
+-- ESP Funcionalidade
 function createESPBox(player)
     if player == LocalPlayer or player.Team == LocalPlayer.Team then return end
     local char = player.Character
@@ -173,7 +235,6 @@ function updateESP()
     end
 end
 
--- Aimbot
 function getClosestInFOV()
     local closest, shortest = nil, math.huge
     local mousePos = UserInputService:GetMouseLocation()
@@ -192,42 +253,9 @@ function getClosestInFOV()
     return closest
 end
 
--- UI Setup
-local espSection = createSection("ESP", 20)
-createButton(espSection, "Ativar ESP", 40, function()
-    ESPEnabled = not ESPEnabled
-    for _, p in pairs(Players:GetPlayers()) do
-        if not ESPBoxes[p] then
-            createESPBox(p)
-        end
-    end
-end)
-
-createColorPicker(espSection, 80, "Cor Box", ESPColor, function(newColor)
-    ESPColor = newColor
-end)
-
-createColorPicker(espSection, 110, "Cor Nome", NameColor, function(newColor)
-    NameColor = newColor
-end)
-
-createSlider(espSection, 140, "FOV", FOVSize, 50, 500, function(val)
-    FOVSize = val
-    FOVCircle.Radius = FOVSize
-end)
-
-createSlider(espSection, 190, "Tamanho Box", BoxSizeMultiplier, 0.1, 3, function(val)
-    BoxSizeMultiplier = val
-end)
-
-local aimSection = createSection("Aimbot", 280)
-createButton(aimSection, "Ativar Aimbot", 40, function()
-    AimbotEnabled = not AimbotEnabled
-    FOVCircle.Visible = AimbotEnabled
-end)
-
--- ESP Update
+-- Atualização contínua
 RunService.RenderStepped:Connect(function()
+    if not HubVisible then return end
     updateESP()
     local mouse = UserInputService:GetMouseLocation()
     FOVCircle.Position = Vector2.new(mouse.X, mouse.Y)
@@ -240,7 +268,7 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- Eventos
+-- Eventos de Jogadores
 Players.PlayerAdded:Connect(function(p)
     p.CharacterAdded:Connect(function()
         wait(1)
@@ -251,12 +279,31 @@ Players.PlayerAdded:Connect(function(p)
 end)
 
 Players.PlayerRemoving:Connect(function(p)
-    if ESPBoxes[p] then
-        ESPBoxes[p]:Remove()
-        ESPBoxes[p] = nil
-    end
-    if ESPNames[p] then
-        ESPNames[p]:Remove()
-        ESPNames[p] = nil
+    if ESPBoxes[p] then ESPBoxes[p]:Remove() ESPBoxes[p] = nil end
+    if ESPNames[p] then ESPNames[p]:Remove() ESPNames[p] = nil end
+end)
+
+-- Tecla para ocultar/mostrar GUI
+UserInputService.InputBegan:Connect(function(input)
+    if input.KeyCode == Enum.KeyCode.RightShift then
+        HubVisible = not HubVisible
+        gui.Enabled = HubVisible
+        FOVCircle.Visible = AimbotEnabled and HubVisible
     end
 end)
+
+-- RGB no título
+local hue = 0
+spawn(function()
+    while true do
+        hue = (hue + 1) % 360
+        local color = Color3.fromHSV(hue/360, 1, 1)
+        title.TextColor3 = color
+        wait(0.03)
+    end
+end)
+
+-- Mostrar ESP inicialmente invisível
+for _, p in pairs(Players:GetPlayers()) do
+    if p ~= LocalPlayer then createESPBox(p) end
+end
