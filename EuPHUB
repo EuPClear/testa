@@ -192,26 +192,36 @@ RunService.RenderStepped:Connect(function()
         for _, player in ipairs(Players:GetPlayers()) do
             if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Team ~= LocalPlayer.Team then
                 local hrp = player.Character.HumanoidRootPart
-                local pos, onscreen = Camera:WorldToViewportPoint(hrp.Position)
-                if onscreen then
-                    if not ESPBoxes[player] then
-                        ESPBoxes[player] = Drawing.new("Square")
-                        ESPBoxes[player].Thickness = 2
-                        ESPBoxes[player].Color = ESPColor
-                        ESPBoxes[player].Filled = false
-                        ESPNames[player] = Drawing.new("Text")
-                        ESPNames[player].Size = 14
-                        ESPNames[player].Color = NameColor
-                        ESPNames[player].Center = true
+                local origin = Camera.CFrame.Position
+                local direction = (hrp.Position - origin).Unit * 500
+                local raycastParams = RaycastParams.new()
+                raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+                raycastParams.FilterDescendantsInstances = {LocalPlayer.Character}
+                raycastParams.IgnoreWater = true
+
+                local result = workspace:Raycast(origin, direction, raycastParams)
+                if result and result.Instance and result.Instance:IsDescendantOf(player.Character) then
+                    local pos, onscreen = Camera:WorldToViewportPoint(hrp.Position)
+                    if onscreen then
+                        if not ESPBoxes[player] then
+                            ESPBoxes[player] = Drawing.new("Square")
+                            ESPBoxes[player].Thickness = 2
+                            ESPBoxes[player].Color = ESPColor
+                            ESPBoxes[player].Filled = false
+                            ESPNames[player] = Drawing.new("Text")
+                            ESPNames[player].Size = 14
+                            ESPNames[player].Color = NameColor
+                            ESPNames[player].Center = true
+                        end
+                        local size = Vector3.new(2, 3, 1.5) * BoxSizeMultiplier
+                        local topLeft = Camera:WorldToViewportPoint(hrp.Position - Vector3.new(size.X/2, -size.Y/2, 0))
+                        ESPBoxes[player].Size = Vector2.new(60 * BoxSizeMultiplier, 100 * BoxSizeMultiplier)
+                        ESPBoxes[player].Position = Vector2.new(topLeft.X, topLeft.Y)
+                        ESPBoxes[player].Visible = true
+                        ESPNames[player].Text = player.Name
+                        ESPNames[player].Position = Vector2.new(topLeft.X + 30, topLeft.Y - 15)
+                        ESPNames[player].Visible = true
                     end
-                    local size = Vector3.new(2, 3, 1.5) * BoxSizeMultiplier
-                    local topLeft = Camera:WorldToViewportPoint(hrp.Position - Vector3.new(size.X/2, -size.Y/2, 0))
-                    ESPBoxes[player].Size = Vector2.new(60 * BoxSizeMultiplier, 100 * BoxSizeMultiplier)
-                    ESPBoxes[player].Position = Vector2.new(topLeft.X, topLeft.Y)
-                    ESPBoxes[player].Visible = true
-                    ESPNames[player].Text = player.Name
-                    ESPNames[player].Position = Vector2.new(topLeft.X + 30, topLeft.Y - 15)
-                    ESPNames[player].Visible = true
                 end
             end
         end
@@ -220,7 +230,10 @@ RunService.RenderStepped:Connect(function()
     if AimbotEnabled then
         local target = getClosestTarget()
         if target and target.Character and target.Character:FindFirstChild("Head") then
-            Camera.CFrame = CFrame.new(Camera.CFrame.Position, target.Character.Head.Position)
+            local head = target.Character.Head.Position
+            local camPos = Camera.CFrame.Position
+            local direction = (head - camPos).Unit
+            Camera.CFrame = Camera.CFrame:Lerp(CFrame.new(camPos, camPos + direction), 0.15)
         end
     end
 end)
