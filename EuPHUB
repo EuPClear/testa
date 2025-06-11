@@ -1,3 +1,29 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+
+local ESPBoxes = {}
+local ESPNames = {}
+
+local ESPEnabled = true
+local AimbotEnabled = true
+local FOVSize = 100
+local BoxSizeMultiplier = 1
+
+local ESPColor = Color3.fromRGB(255, 0, 0)
+local NameColor = Color3.fromRGB(255, 255, 255)
+
+local FOVCircle = Drawing.new("Circle")
+FOVCircle.Color = Color3.fromRGB(255, 255, 255)
+FOVCircle.Thickness = 1
+FOVCircle.NumSides = 64
+FOVCircle.Radius = FOVSize
+FOVCircle.Filled = false
+FOVCircle.Visible = true
+
 -- === ESP e Aimbot Lógica (com Wall Check) ===
 local function createESPBox(player)
     if player == LocalPlayer then return end
