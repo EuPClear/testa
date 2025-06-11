@@ -1,7 +1,10 @@
+-- === EUP HUB - Interface Unificada com ESP + Aimbot + Wall Check ===
+
+-- Serviços e Variáveis Globais
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
-
+local TweenService = game:GetService("TweenService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
@@ -23,6 +26,108 @@ FOVCircle.NumSides = 64
 FOVCircle.Radius = FOVSize
 FOVCircle.Filled = false
 FOVCircle.Visible = true
+
+-- GUI Principal
+local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
+ScreenGui.Name = "EUP_HUB"
+local MainFrame = Instance.new("Frame", ScreenGui)
+MainFrame.Position = UDim2.new(0.3, 0, 0.3, 0)
+MainFrame.Size = UDim2.new(0, 350, 0, 250)
+MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Draggable = true
+
+local UICorner = Instance.new("UICorner", MainFrame)
+UICorner.CornerRadius = UDim.new(0, 10)
+
+-- Título RGB
+local Title = Instance.new("TextLabel", MainFrame)
+Title.Size = UDim2.new(1, 0, 0, 30)
+Title.BackgroundTransparency = 1
+Title.Text = "EUP HUB"
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 20
+Title.TextColor3 = Color3.fromRGB(255, 0, 0)
+
+-- RGB loop
+spawn(function()
+    while true do
+        for i = 0, 1, 0.01 do
+            Title.TextColor3 = Color3.fromHSV(i, 1, 1)
+            task.wait()
+        end
+    end
+end)
+
+-- Abas
+local Tabs = Instance.new("Frame", MainFrame)
+Tabs.Size = UDim2.new(1, 0, 0, 30)
+Tabs.Position = UDim2.new(0, 0, 0, 30)
+Tabs.BackgroundTransparency = 1
+
+local WelcomeButton = Instance.new("TextButton", Tabs)
+WelcomeButton.Size = UDim2.new(0, 80, 0, 30)
+WelcomeButton.Position = UDim2.new(0, 0, 0, 0)
+WelcomeButton.Text = "Welcome"
+local ESPButton = Instance.new("TextButton", Tabs)
+ESPButton.Size = UDim2.new(0, 80, 0, 30)
+ESPButton.Position = UDim2.new(0, 85, 0, 0)
+ESPButton.Text = "ESP"
+local AimbotButton = Instance.new("TextButton", Tabs)
+AimbotButton.Size = UDim2.new(0, 80, 0, 30)
+AimbotButton.Position = UDim2.new(0, 170, 0, 0)
+AimbotButton.Text = "Aimbot"
+
+-- Páginas
+local Pages = {}
+for _, name in pairs({"Welcome", "ESP", "Aimbot"}) do
+    local page = Instance.new("Frame", MainFrame)
+    page.Size = UDim2.new(1, 0, 1, -60)
+    page.Position = UDim2.new(0, 0, 0, 60)
+    page.BackgroundTransparency = 1
+    page.Visible = false
+    Pages[name] = page
+end
+Pages.Welcome.Visible = true
+
+WelcomeButton.MouseButton1Click:Connect(function()
+    for _, p in pairs(Pages) do p.Visible = false end
+    Pages.Welcome.Visible = true
+end)
+ESPButton.MouseButton1Click:Connect(function()
+    for _, p in pairs(Pages) do p.Visible = false end
+    Pages.ESP.Visible = true
+end)
+AimbotButton.MouseButton1Click:Connect(function()
+    for _, p in pairs(Pages) do p.Visible = false end
+    Pages.Aimbot.Visible = true
+end)
+
+-- Minimizar
+UserInputService.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode == Enum.KeyCode.RightShift then
+        MainFrame.Visible = not MainFrame.Visible
+    end
+end)
+
+-- Controles ESP
+local ESPToggle = Instance.new("TextButton", Pages.ESP)
+ESPToggle.Text = "Toggle ESP"
+ESPToggle.Position = UDim2.new(0, 10, 0, 10)
+ESPToggle.Size = UDim2.new(0, 100, 0, 25)
+ESPToggle.MouseButton1Click:Connect(function()
+    ESPEnabled = not ESPEnabled
+end)
+
+-- Controles Aimbot
+local AimbotToggle = Instance.new("TextButton", Pages.Aimbot)
+AimbotToggle.Text = "Toggle Aimbot"
+AimbotToggle.Position = UDim2.new(0, 10, 0, 10)
+AimbotToggle.Size = UDim2.new(0, 100, 0, 25)
+AimbotToggle.MouseButton1Click:Connect(function()
+    AimbotEnabled = not AimbotEnabled
+end)
 
 -- === ESP e Aimbot Lógica (com Wall Check) ===
 local function createESPBox(player)
@@ -46,14 +151,8 @@ local function createESPBox(player)
 end
 
 local function removeESP(player)
-    if ESPBoxes[player] then
-        ESPBoxes[player]:Remove()
-        ESPBoxes[player] = nil
-    end
-    if ESPNames[player] then
-        ESPNames[player]:Remove()
-        ESPNames[player] = nil
-    end
+    if ESPBoxes[player] then ESPBoxes[player]:Remove() ESPBoxes[player] = nil end
+    if ESPNames[player] then ESPNames[player]:Remove() ESPNames[player] = nil end
 end
 
 Players.PlayerRemoving:Connect(function(player)
@@ -145,4 +244,4 @@ Players.PlayerAdded:Connect(function(p)
     createESPBox(p)
 end)
 
-print("EUP HUB EXECUTADO!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+print("EUP HUB EXECUTADO COM INTERFACE UNIFICADA!")
