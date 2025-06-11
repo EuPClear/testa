@@ -104,6 +104,17 @@ AimbotButton.MouseButton1Click:Connect(function()
     Pages.Aimbot.Visible = true
 end)
 
+-- Mensagem de boas-vindas
+local WelcomeLabel = Instance.new("TextLabel", Pages.Welcome)
+WelcomeLabel.Text = "Bem-vindo ao EUP HUB! Configure seu ESP e Aimbot nas abas."
+WelcomeLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+WelcomeLabel.Size = UDim2.new(1, -20, 0, 50)
+WelcomeLabel.Position = UDim2.new(0, 10, 0, 10)
+WelcomeLabel.BackgroundTransparency = 1
+WelcomeLabel.TextWrapped = true
+WelcomeLabel.Font = Enum.Font.Gotham
+WelcomeLabel.TextSize = 16
+
 -- Minimizar
 UserInputService.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode == Enum.KeyCode.RightShift then
