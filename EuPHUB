@@ -118,3 +118,5 @@ Players.PlayerAdded:Connect(function(p)
     task.wait(1)
     createESPBox(p)
 end)
+
+print("EXECUTADO")
