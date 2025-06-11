@@ -1,219 +1,18 @@
--- EUP HUB - ESP & Aimbot com Abas, Minimizar (Shift Direito), RGB Título
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
-local Camera = workspace.CurrentCamera
-local LocalPlayer = Players.LocalPlayer
-
-local ESPEnabled = false
-local AimbotEnabled = false
-local ESPBoxes = {}
-local ESPNames = {}
-local ESPColor = Color3.fromRGB(255, 80, 80)
-local NameColor = Color3.fromRGB(255, 255, 255)
-local FOVSize = 150
-local BoxSizeMultiplier = 1
-local HubVisible = true
-
-local FOVCircle = Drawing.new("Circle")
-FOVCircle.Color = Color3.fromRGB(85, 170, 255)
-FOVCircle.Thickness = 1
-FOVCircle.NumSides = 100
-FOVCircle.Radius = FOVSize
-FOVCircle.Filled = false
-FOVCircle.Visible = false
-
--- Interface
-local gui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
-gui.Name = "EUP_HUB"
-local mainFrame = Instance.new("Frame", gui)
-mainFrame.Size = UDim2.new(0, 320, 0, 300)
-mainFrame.Position = UDim2.new(0, 20, 0, 50)
-mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-mainFrame.Active = true
-mainFrame.Draggable = true
-Instance.new("UICorner", mainFrame)
-Instance.new("UIStroke", mainFrame).Color = Color3.fromRGB(85, 170, 255)
-
-local title = Instance.new("TextLabel", mainFrame)
-title.Size = UDim2.new(1, 0, 0, 30)
-title.Text = "EUP HUB"
-title.Font = Enum.Font.GothamBold
-title.TextSize = 20
-title.BackgroundTransparency = 1
-task.spawn(function()
-    while true do
-        for i = 0, 1, 0.01 do
-            title.TextColor3 = Color3.fromHSV(i, 1, 1)
-            task.wait()
-        end
-    end
-end)
-
-local tabButtons = Instance.new("Frame", mainFrame)
-tabButtons.Size = UDim2.new(1, 0, 0, 30)
-tabButtons.Position = UDim2.new(0, 0, 0, 30)
-tabButtons.BackgroundTransparency = 1
-
-local contentFrame = Instance.new("Frame", mainFrame)
-contentFrame.Size = UDim2.new(1, 0, 1, -60)
-contentFrame.Position = UDim2.new(0, 0, 0, 60)
-contentFrame.BackgroundTransparency = 1
-
-local currentTab = nil
-local function createTab(name)
-    local tab = Instance.new("Frame", contentFrame)
-    tab.Name = name
-    tab.Size = UDim2.new(1, 0, 1, 0)
-    tab.Visible = false
-    tab.BackgroundTransparency = 1
-    return tab
-end
-
-local function createTabButton(name, tab, xPos)
-    local btn = Instance.new("TextButton", tabButtons)
-    btn.Size = UDim2.new(0, 100, 1, 0)
-    btn.Position = UDim2.new(0, xPos, 0, 0)
-    btn.Text = name
-    btn.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-    btn.TextColor3 = Color3.new(1, 1, 1)
-    btn.Font = Enum.Font.Gotham
-    btn.TextSize = 14
-    Instance.new("UICorner", btn)
-    btn.MouseButton1Click:Connect(function()
-        if currentTab then currentTab.Visible = false end
-        tab.Visible = true
-        currentTab = tab
-    end)
-end
-
--- UI Elements
-local function createButton(parent, text, yPos, callback)
-    local btn = Instance.new("TextButton", parent)
-    btn.Size = UDim2.new(0.9, 0, 0, 30)
-    btn.Position = UDim2.new(0.05, 0, 0, yPos)
-    btn.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-    btn.Text = text
-    btn.TextColor3 = Color3.new(1, 1, 1)
-    btn.Font = Enum.Font.Gotham
-    btn.TextSize = 14
-    Instance.new("UICorner", btn)
-    btn.MouseButton1Click:Connect(callback)
-end
-
-local function createColorPicker(parent, yPos, name, defaultColor, onColorChanged)
-    local label = Instance.new("TextLabel", parent)
-    label.Size = UDim2.new(0.5, 0, 0, 25)
-    label.Position = UDim2.new(0.05, 0, 0, yPos)
-    label.Text = name
-    label.Font = Enum.Font.Gotham
-    label.TextSize = 14
-    label.TextColor3 = Color3.new(1,1,1)
-    label.BackgroundTransparency = 1
-
-    local box = Instance.new("TextBox", parent)
-    box.Size = UDim2.new(0.4, 0, 0, 25)
-    box.Position = UDim2.new(0.55, 0, 0, yPos)
-    box.Text = string.format("%d,%d,%d", defaultColor.R*255, defaultColor.G*255, defaultColor.B*255)
-    box.Font = Enum.Font.Code
-    box.TextSize = 14
-    box.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-    box.TextColor3 = Color3.new(1,1,1)
-    Instance.new("UICorner", box)
-
-    box.FocusLost:Connect(function()
-        local r,g,b = box.Text:match("(%d+),(%d+),(%d+)")
-        if r and g and b then
-            local c = Color3.fromRGB(tonumber(r), tonumber(g), tonumber(b))
-            onColorChanged(c)
-        end
-    end)
-end
-
-local function createSlider(parent, yPos, labelText, defaultValue, min, max, onChanged)
-    local label = Instance.new("TextLabel", parent)
-    label.Size = UDim2.new(1, -10, 0, 20)
-    label.Position = UDim2.new(0.05, 0, 0, yPos)
-    label.Text = labelText
-    label.TextColor3 = Color3.new(1, 1, 1)
-    label.Font = Enum.Font.Gotham
-    label.TextSize = 14
-    label.BackgroundTransparency = 1
-
-    local slider = Instance.new("TextBox", parent)
-    slider.Size = UDim2.new(0.9, 0, 0, 25)
-    slider.Position = UDim2.new(0.05, 0, 0, yPos + 20)
-    slider.Text = tostring(defaultValue)
-    slider.Font = Enum.Font.Code
-    slider.TextSize = 14
-    slider.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-    slider.TextColor3 = Color3.new(1,1,1)
-    Instance.new("UICorner", slider)
-
-    slider.FocusLost:Connect(function()
-        local new = tonumber(slider.Text)
-        if new then
-            new = math.clamp(new, min, max)
-            onChanged(new)
-        end
-    end)
-end
-
--- Abas
-local welcomeTab = createTab("Welcome")
-createTabButton("Welcome", welcomeTab, 0)
-local espTab = createTab("ESP")
-createTabButton("ESP", espTab, 105)
-local aimTab = createTab("Aimbot")
-createTabButton("Aimbot", aimTab, 210)
-
-local welcomeLabel = Instance.new("TextLabel", welcomeTab)
-welcomeLabel.Size = UDim2.new(1, 0, 0, 30)
-welcomeLabel.Position = UDim2.new(0, 0, 0, 20)
-welcomeLabel.Text = "Welcome to EUP HUB!"
-welcomeLabel.Font = Enum.Font.GothamBold
-welcomeLabel.TextSize = 18
-welcomeLabel.TextColor3 = Color3.new(1,1,1)
-welcomeLabel.BackgroundTransparency = 1
-
-createButton(espTab, "Ativar ESP", 10, function()
-    ESPEnabled = not ESPEnabled
-end)
-createColorPicker(espTab, 50, "Cor Box", ESPColor, function(newColor) ESPColor = newColor end)
-createColorPicker(espTab, 80, "Cor Nome", NameColor, function(newColor) NameColor = newColor end)
-createSlider(espTab, 110, "Tamanho Box", BoxSizeMultiplier, 0.1, 3, function(val) BoxSizeMultiplier = val end)
-
-createButton(aimTab, "Ativar Aimbot", 10, function()
-    AimbotEnabled = not AimbotEnabled
-    FOVCircle.Visible = AimbotEnabled
-end)
-createSlider(aimTab, 50, "FOV", FOVSize, 50, 500, function(val)
-    FOVSize = val
-    FOVCircle.Radius = val
-end)
-
-welcomeTab.Visible = true
-currentTab = welcomeTab
-
-UserInputService.InputBegan:Connect(function(input, processed)
-    if processed then return end
-    if input.KeyCode == Enum.KeyCode.RightShift then
-        HubVisible = not HubVisible
-        mainFrame.Visible = HubVisible
-    end
-end)
-
+-- === ESP e Aimbot Lógica (com Wall Check) ===
 local function createESPBox(player)
     if player == LocalPlayer then return end
+
     local box = Drawing.new("Square")
     box.Thickness = 2
-    box.Filled = false
+    box.Color = ESPColor
     box.Visible = false
+    box.Filled = false
 
     local name = Drawing.new("Text")
     name.Size = 14
     name.Center = true
     name.Outline = true
+    name.Color = NameColor
     name.Visible = false
 
     ESPBoxes[player] = box
@@ -221,31 +20,47 @@ local function createESPBox(player)
 end
 
 local function removeESP(player)
-    if ESPBoxes[player] then ESPBoxes[player]:Remove() ESPBoxes[player] = nil end
-    if ESPNames[player] then ESPNames[player]:Remove() ESPNames[player] = nil end
-end
-
-Players.PlayerRemoving:Connect(removeESP)
-Players.PlayerAdded:Connect(function(p)
-    task.wait(1)
-    createESPBox(p)
-end)
-
-for _, p in pairs(Players:GetPlayers()) do
-    if not ESPBoxes[p] then
-        createESPBox(p)
+    if ESPBoxes[player] then
+        ESPBoxes[player]:Remove()
+        ESPBoxes[player] = nil
+    end
+    if ESPNames[player] then
+        ESPNames[player]:Remove()
+        ESPNames[player] = nil
     end
 end
 
+Players.PlayerRemoving:Connect(function(player)
+    removeESP(player)
+end)
+
+local function isVisible(targetPosition, targetCharacter)
+    local origin = Camera.CFrame.Position
+    local direction = (targetPosition - origin).Unit * 500
+    local raycastParams = RaycastParams.new()
+    raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+    raycastParams.FilterDescendantsInstances = {LocalPlayer.Character, Camera}
+    raycastParams.IgnoreWater = true
+
+    local result = workspace:Raycast(origin, direction, raycastParams)
+    return result and result.Instance and result.Instance:IsDescendantOf(targetCharacter)
+end
+
 local function getClosestTarget()
-    local closest, shortest = nil, math.huge
+    local closest = nil
+    local shortest = math.huge
+
     for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Team ~= LocalPlayer.Team and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            local pos, onScreen = Camera:WorldToViewportPoint(player.Character.HumanoidRootPart.Position)
-            local distance = (Vector2.new(pos.X, pos.Y) - UserInputService:GetMouseLocation()).Magnitude
-            if onScreen and distance < FOVSize and distance < shortest then
-                shortest = distance
-                closest = player
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            if player.Team ~= LocalPlayer.Team then
+                local pos, onScreen = Camera:WorldToViewportPoint(player.Character.HumanoidRootPart.Position)
+                local distance = (Vector2.new(pos.X, pos.Y) - UserInputService:GetMouseLocation()).Magnitude
+                if onScreen and distance < FOVSize and distance < shortest then
+                    if isVisible(player.Character.Head.Position, player.Character) then
+                        shortest = distance
+                        closest = player
+                    end
+                end
             end
         end
     end
@@ -257,21 +72,22 @@ RunService.RenderStepped:Connect(function()
     FOVCircle.Position = mousePos
 
     for _, player in ipairs(Players:GetPlayers()) do
-        local char = player.Character
-        if player ~= LocalPlayer and char and char:FindFirstChild("HumanoidRootPart") and char:FindFirstChild("Head") and player.Team ~= LocalPlayer.Team then
-            local hrp = char.HumanoidRootPart
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character:FindFirstChild("Head") then
+            local hrp = player.Character.HumanoidRootPart
+            local head = player.Character.Head
             local pos, visible = Camera:WorldToViewportPoint(hrp.Position)
-            if ESPEnabled and visible then
+
+            if ESPEnabled and visible and isVisible(head.Position, player.Character) and player.Team ~= LocalPlayer.Team then
                 local scale = BoxSizeMultiplier
                 local size = Vector2.new(50, 100) * scale
-                local screenPos = Vector2.new(pos.X - size.X/2, pos.Y - size.Y/2)
+                local screenPos = Vector2.new(pos.X - size.X / 2, pos.Y - size.Y / 2)
 
                 ESPBoxes[player].Size = size
                 ESPBoxes[player].Position = screenPos
                 ESPBoxes[player].Color = ESPColor
                 ESPBoxes[player].Visible = true
 
-                ESPNames[player].Position = Vector2.new(pos.X, pos.Y - size.Y/2 - 14)
+                ESPNames[player].Position = Vector2.new(pos.X, pos.Y - size.Y / 2 - 14)
                 ESPNames[player].Text = player.Name
                 ESPNames[player].Color = NameColor
                 ESPNames[player].Visible = true
@@ -289,4 +105,16 @@ RunService.RenderStepped:Connect(function()
             mousemoverel((headPos.X - mousePos.X) / 4, (headPos.Y - mousePos.Y) / 4)
         end
     end
+end)
+
+-- Criar ESP para jogadores atuais
+for _, p in pairs(Players:GetPlayers()) do
+    if not ESPBoxes[p] then
+        createESPBox(p)
+    end
+end
+
+Players.PlayerAdded:Connect(function(p)
+    task.wait(1)
+    createESPBox(p)
 end)
