@@ -28,7 +28,8 @@ FOVCircle.Filled = false
 FOVCircle.Visible = true
 
 -- GUI Principal
-local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
 ScreenGui.Name = "EUP_HUB"
 local MainFrame = Instance.new("Frame", ScreenGui)
 MainFrame.Position = UDim2.new(0.3, 0, 0.3, 0)
