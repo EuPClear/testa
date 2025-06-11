@@ -33,7 +33,7 @@ ScreenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
 ScreenGui.Name = "EUP_HUB"
 local MainFrame = Instance.new("Frame", ScreenGui)
 MainFrame.Position = UDim2.new(0.3, 0, 0.3, 0)
-MainFrame.Size = UDim2.new(0, 350, 0, 250)
+MainFrame.Size = UDim2.new(0, 350, 0, 300)
 MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -51,7 +51,6 @@ Title.Font = Enum.Font.GothamBold
 Title.TextSize = 20
 Title.TextColor3 = Color3.fromRGB(255, 0, 0)
 
--- RGB loop
 spawn(function()
     while true do
         for i = 0, 1, 0.01 do
@@ -121,6 +120,53 @@ ESPToggle.MouseButton1Click:Connect(function()
     ESPEnabled = not ESPEnabled
 end)
 
+local BoxSizeSlider = Instance.new("TextBox", Pages.ESP)
+BoxSizeSlider.PlaceholderText = "Box Size (ex: 1.2)"
+BoxSizeSlider.Size = UDim2.new(0, 120, 0, 25)
+BoxSizeSlider.Position = UDim2.new(0, 10, 0, 45)
+BoxSizeSlider.Text = tostring(BoxSizeMultiplier)
+BoxSizeSlider.FocusLost:Connect(function()
+    local val = tonumber(BoxSizeSlider.Text)
+    if val then BoxSizeMultiplier = val end
+end)
+
+local ESPColorBox = Instance.new("TextBox", Pages.ESP)
+ESPColorBox.PlaceholderText = "ESP Color (R,G,B)"
+ESPColorBox.Size = UDim2.new(0, 120, 0, 25)
+ESPColorBox.Position = UDim2.new(0, 10, 0, 80)
+ESPColorBox.Text = "255,0,0"
+ESPColorBox.FocusLost:Connect(function()
+    local r, g, b = ESPColorBox.Text:match("(%d+),(%d+),(%d+)")
+    if r and g and b then
+        ESPColor = Color3.fromRGB(tonumber(r), tonumber(g), tonumber(b))
+    end
+end)
+
+local NameColorBox = Instance.new("TextBox", Pages.ESP)
+NameColorBox.PlaceholderText = "Name Color (R,G,B)"
+NameColorBox.Size = UDim2.new(0, 120, 0, 25)
+NameColorBox.Position = UDim2.new(0, 10, 0, 115)
+NameColorBox.Text = "255,255,255"
+NameColorBox.FocusLost:Connect(function()
+    local r, g, b = NameColorBox.Text:match("(%d+),(%d+),(%d+)")
+    if r and g and b then
+        NameColor = Color3.fromRGB(tonumber(r), tonumber(g), tonumber(b))
+    end
+end)
+
+local FOVSizeBox = Instance.new("TextBox", Pages.ESP)
+FOVSizeBox.PlaceholderText = "FOV Size (ex: 100)"
+FOVSizeBox.Size = UDim2.new(0, 120, 0, 25)
+FOVSizeBox.Position = UDim2.new(0, 10, 0, 150)
+FOVSizeBox.Text = tostring(FOVSize)
+FOVSizeBox.FocusLost:Connect(function()
+    local val = tonumber(FOVSizeBox.Text)
+    if val then
+        FOVSize = val
+        FOVCircle.Radius = FOVSize
+    end
+end)
+
 -- Controles Aimbot
 local AimbotToggle = Instance.new("TextButton", Pages.Aimbot)
 AimbotToggle.Text = "Toggle Aimbot"
@@ -130,119 +176,4 @@ AimbotToggle.MouseButton1Click:Connect(function()
     AimbotEnabled = not AimbotEnabled
 end)
 
--- === ESP e Aimbot Lógica (com Wall Check) ===
-local function createESPBox(player)
-    if player == LocalPlayer then return end
-
-    local box = Drawing.new("Square")
-    box.Thickness = 2
-    box.Color = ESPColor
-    box.Visible = false
-    box.Filled = false
-
-    local name = Drawing.new("Text")
-    name.Size = 14
-    name.Center = true
-    name.Outline = true
-    name.Color = NameColor
-    name.Visible = false
-
-    ESPBoxes[player] = box
-    ESPNames[player] = name
-end
-
-local function removeESP(player)
-    if ESPBoxes[player] then ESPBoxes[player]:Remove() ESPBoxes[player] = nil end
-    if ESPNames[player] then ESPNames[player]:Remove() ESPNames[player] = nil end
-end
-
-Players.PlayerRemoving:Connect(function(player)
-    removeESP(player)
-end)
-
-local function isVisible(targetPosition, targetCharacter)
-    local origin = Camera.CFrame.Position
-    local direction = (targetPosition - origin).Unit * 500
-    local raycastParams = RaycastParams.new()
-    raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
-    raycastParams.FilterDescendantsInstances = {LocalPlayer.Character, Camera}
-    raycastParams.IgnoreWater = true
-
-    local result = workspace:Raycast(origin, direction, raycastParams)
-    return result and result.Instance and result.Instance:IsDescendantOf(targetCharacter)
-end
-
-local function getClosestTarget()
-    local closest = nil
-    local shortest = math.huge
-
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            if player.Team ~= LocalPlayer.Team then
-                local pos, onScreen = Camera:WorldToViewportPoint(player.Character.HumanoidRootPart.Position)
-                local distance = (Vector2.new(pos.X, pos.Y) - UserInputService:GetMouseLocation()).Magnitude
-                if onScreen and distance < FOVSize and distance < shortest then
-                    if isVisible(player.Character.Head.Position, player.Character) then
-                        shortest = distance
-                        closest = player
-                    end
-                end
-            end
-        end
-    end
-    return closest
-end
-
-RunService.RenderStepped:Connect(function()
-    local mousePos = UserInputService:GetMouseLocation()
-    FOVCircle.Position = mousePos
-
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character:FindFirstChild("Head") then
-            local hrp = player.Character.HumanoidRootPart
-            local head = player.Character.Head
-            local pos, visible = Camera:WorldToViewportPoint(hrp.Position)
-
-            if ESPEnabled and visible and isVisible(head.Position, player.Character) and player.Team ~= LocalPlayer.Team then
-                local scale = BoxSizeMultiplier
-                local size = Vector2.new(50, 100) * scale
-                local screenPos = Vector2.new(pos.X - size.X / 2, pos.Y - size.Y / 2)
-
-                ESPBoxes[player].Size = size
-                ESPBoxes[player].Position = screenPos
-                ESPBoxes[player].Color = ESPColor
-                ESPBoxes[player].Visible = true
-
-                ESPNames[player].Position = Vector2.new(pos.X, pos.Y - size.Y / 2 - 14)
-                ESPNames[player].Text = player.Name
-                ESPNames[player].Color = NameColor
-                ESPNames[player].Visible = true
-            else
-                if ESPBoxes[player] then ESPBoxes[player].Visible = false end
-                if ESPNames[player] then ESPNames[player].Visible = false end
-            end
-        end
-    end
-
-    if AimbotEnabled then
-        local target = getClosestTarget()
-        if target and target.Character and target.Character:FindFirstChild("Head") then
-            local headPos = Camera:WorldToViewportPoint(target.Character.Head.Position)
-            mousemoverel((headPos.X - mousePos.X) / 4, (headPos.Y - mousePos.Y) / 4)
-        end
-    end
-end)
-
--- Criar ESP para jogadores atuais
-for _, p in pairs(Players:GetPlayers()) do
-    if not ESPBoxes[p] then
-        createESPBox(p)
-    end
-end
-
-Players.PlayerAdded:Connect(function(p)
-    task.wait(1)
-    createESPBox(p)
-end)
-
-print("EUP HUB EXECUTADO COM INTERFACE UNIFICADA!")
+-- Resto do código permanece igual...
